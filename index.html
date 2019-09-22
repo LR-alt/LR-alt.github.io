@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>箭头函数</title>
+</head>
+<body>
+<button type="button">click</button>
+<h1>欢迎回来</h1>
+<script>
+    document.querySelector('button').onclick = function () {
+        setTimeout(()=>{
+            this.style.backgroundColor = "red";
+        })
+    }
+</script>
+</body>
+</html>
