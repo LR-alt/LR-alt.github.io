@@ -8,43 +8,43 @@ function identity<T>(arg: T): T {
 ```
 ##### 泛型+接口
 -（<>）括起泛型类型跟在接口名后面，或内部使用泛型  
-```typescript
-// 形式1：接口属性设置泛型
-interface GenericIdentityFn {
-  <T>(arg: T): T
-}
-let myIdentity: GenericIdentityFn = identity;
-// 形式2：把泛型参数当作整个接口的一个参数
-interface GenericIdentityF1<T> {
-  (arg: T): T
-}
-// 指定了identity函数的泛型参数为string类型
-let myIdentity1: GenericIdentityF1<string> = identity;
-```  
+  ```typescript
+   // 形式1：接口属性设置泛型
+   interface GenericIdentityFn {
+     <T>(arg: T): T
+   }
+   let myIdentity: GenericIdentityFn = identity;
+   // 形式2：把泛型参数当作整个接口的一个参数
+   interface GenericIdentityF1<T> {
+     (arg: T): T
+   }
+   // 指定了identity函数的泛型参数为string类型
+   let myIdentity1: GenericIdentityF1<string> = identity;
+  ```  
 ##### 泛型+类
 - 泛型类看上去与泛型接口差不多。 泛型类使用（<>）括起泛型类型，跟在类名后面。
 - 类有两部分：静态部分和实例部分。 泛型类指的是实例部分的类型，所以类的静态属性不能使用这个泛型类型。 
-```typescript
-  class GenericNumber<T> {
-    value: T;
-    add: (x: T, y: T) => T;
-  }
-  let myGenericNumber = new GenericNumber<string>();
-  myGenericNumber.zeroValue = '34';
-  myGenericNumber.add('43', '54')
-```  
+  ```typescript
+    class GenericNumber<T> {
+      value: T;
+      add: (x: T, y: T) => T;
+    }
+    let myGenericNumber = new GenericNumber<string>();
+    myGenericNumber.zeroValue = '34';
+    myGenericNumber.add('43', '54')
+  ```  
 ##### 泛型约束
 - 有时我们需要限制传入函数的类型（如带length的数组），传入的类型至少需要包含这一属性，这时可以使用extends关键字实现约束
-```typescript
-  interface LengthWise {
-    length: number;
-  }
-  function loggingIdentity<T extends LengthWise>(arg: T): T {
-    console.log(arg.length);
-    return arg;
-  }
-  loggingIdentity({ a: 43, length: 34 })
-```  
+  ```typescript
+    interface LengthWise {
+      length: number;
+    }
+    function loggingIdentity<T extends LengthWise>(arg: T): T {
+      console.log(arg.length);
+      return arg;
+    }
+    loggingIdentity({ a: 43, length: 34 })
+  ```  
 ### 类型的运用    
 ##### 类型操作符
  - keyof ：允许我们遍历某种类型的属性，获取该类型的所有键，且返回类型是联合类型。
