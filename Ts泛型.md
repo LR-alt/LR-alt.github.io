@@ -1,14 +1,14 @@
 ### 泛型的运用
 ##### 泛型+函数
 - <T>类似于函数的形参，也是入口，供函数内部使用
-```
+```typescript
 function identity<T>(arg: T): T {
   return arg;
 }
 ```
 ##### 泛型+接口
 -（<>）括起泛型类型跟在接口名后面，或内部使用泛型  
-```
+```typescript
 // 形式1：接口属性设置泛型
 interface GenericIdentityFn {
   <T>(arg: T): T
@@ -24,7 +24,7 @@ let myIdentity1: GenericIdentityF1<string> = identity;
 ##### 泛型+类
 - 泛型类看上去与泛型接口差不多。 泛型类使用（<>）括起泛型类型，跟在类名后面。
 - 类有两部分：静态部分和实例部分。 泛型类指的是实例部分的类型，所以类的静态属性不能使用这个泛型类型。 
-```
+```typescript
   class GenericNumber<T> {
     value: T;
     add: (x: T, y: T) => T;
@@ -35,7 +35,7 @@ let myIdentity1: GenericIdentityF1<string> = identity;
 ```  
 ##### 泛型约束
 - 有时我们需要限制传入函数的类型（如带length的数组），传入的类型至少需要包含这一属性，这时可以使用extends关键字实现约束
-```
+```typescript
   interface LengthWise {
     length: number;
   }
@@ -48,7 +48,7 @@ let myIdentity1: GenericIdentityF1<string> = identity;
 ### 类型的运用    
 ##### 类型操作符
  - keyof ：允许我们遍历某种类型的属性，获取该类型的所有键，且返回类型是联合类型。
-   ```
+   ```typescript
      type Point = { x: number, y: boolean };
      type P = keyof Point; // Point
 
@@ -59,20 +59,20 @@ let myIdentity1: GenericIdentityF1<string> = identity;
      type O = typeof obj; // 'a' | 'b' | 'c'
    ``` 
  - typeof:用来获取一个变量或对象的类型(注意：其后需为标识符，而非直接值)   
-   ```
+   ```typescript
      type S = typeof 'str';
      const char:S; 
      // 等价于
      const char1:string;
    ```
  - ReturnType<funcType>: 获取函数返回的类型    
-   ```
+   ```typescript
      type Predicate = (x: unknown) => ({ x: number, y: boolean });
      type K = ReturnType<Predicate>;
    ```  
 ##### 常见的类型用方式
  - 索引访问类型：用类似于js中获取对象或数组属性的方式去访问类型 
-   ```
+   ```typescript
      type Person = { age: number, name: string, alive: boolean };
      // 写法1
      type Age = Person['name']; √
@@ -95,7 +95,7 @@ let myIdentity1: GenericIdentityF1<string> = identity;
      type SingleType = typeof myArr[number]['a']
    ```
   - 条件类型：类似于js中三元运算符的方式获取类型 
-   ```
+   ```typescript
      // 简单应用
      type Example1 = number extends any ? number : string; // number
      type Example2 = RegExp extends Object ? boolean : string[]; // boolean
@@ -128,7 +128,7 @@ let myIdentity1: GenericIdentityF1<string> = identity;
      const combineUnionArr:CombineArr = [43,'434'] // 类似于元组，数组项可为多种类型值
    ``` 
   - 映射类型：映射类型构建在索引签名的语法之上。
-   ```
+   ```typescript
      type OptionsFlags<Type> = {
        [Property in keyof Type]: boolean;
      };
@@ -140,4 +140,4 @@ let myIdentity1: GenericIdentityF1<string> = identity;
    ```
 ### 小结
  - ts中的泛型类似于js中的函数形参，在使用时只需要传入相应类型即可
- - ts中的各种类型的访问和操作方式，类似于js中的常见的赋值、三元运算、对象及数组的索引和遍历等操作。   
+ - ts中的各种类型的访问和操作方式，类似于js中的常见的赋值、三元运算、对象及数组的索引和遍历等操作,不用的是js是操作值，而ts是操作类型。   
