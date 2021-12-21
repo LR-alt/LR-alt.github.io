@@ -1,18 +1,21 @@
 <template>
   <div class="hello">
     <el-form :model="ruleForm" ref="validForm" size="mini">
-      <el-table :data="tableData" border style="width: 100%">
+      <el-table :data="tableData" border style="width: 100%" @cell-click="cellClick">
+        <el-table-column type="index" width="50"></el-table-column>
         <el-table-column prop="data" label="日期" width="180" key="data">
           <template slot-scope="{ row,$index }">
-            <el-form-item :prop="`${$index}.data`" :rules="getRule">
-              <el-input v-model="ruleForm[$index].data"></el-input>
+            <span v-if="!getRowState(row).data.edit">{{ row.data }}</span>
+            <el-form-item v-else :prop="`${$index}.data`" :rules="getRule">
+              <el-input v-model="row.data" @click="handlerClick"></el-input>
             </el-form-item>
           </template>
         </el-table-column>
         <el-table-column prop="name" label="姓名" width="180" key="name">
           <template slot-scope="{ row,$index }">
-            <el-form-item :prop="`${$index}.name`" :rules="getRule">
-              <el-input v-model="ruleForm[$index].name"></el-input>
+            <span v-if="!getRowState(row).name.edit">{{ row.name }}</span>
+            <el-form-item v-else :prop="`${$index}.name`" :rules="getRule">
+              <el-input v-model="row.name"></el-input>
             </el-form-item>
           </template>
         </el-table-column>
@@ -39,6 +42,13 @@ export default {
     return {
       tableData: [],
       ruleForm: {},
+      propArr: [],
+      propMap: new Map(),
+      diffObj: {
+        diffArr: null,
+        isIncrement: true,
+      },
+      editableOps: ['data', 'name'],
     }
   },
   created() {
@@ -52,18 +62,18 @@ export default {
     },
   },
   watch: {
-    tableData(newTableArr) {
+    tableData(newTable) {
       // 表单数据浅拷贝于数组，因此表单和数组共享子项数据。
-      this.ruleForm = { ...newTableArr };
-      console.log(this.tableData);
-      console.log(this.ruleForm);
+      this.ruleForm = { ...newTable };
+      // 同步属性绑定的状态
+      this.updatePropState(newTable);
     },
   },
   methods: {
     // 请求数据
     getTableData() {
       setTimeout(() => {
-        this.tableData = [{
+        const srcData = [{
           data: '2016-05-01',
           name: '王1虎',
           tarAddress: '上海市普陀区金沙江路 1511 弄'
@@ -80,27 +90,83 @@ export default {
           name: '',
           tarAddress: '上海市普陀区金沙江路 1514 弄'
         }];
+        this.tableData = srcData;
       }, 200);
     },
+    // set prop diff state
+    setDiffObj(diffArr, isIncrement) {
+      diffArr = Array.isArray(diffArr) ? diffArr : [diffArr];
+      Object.assign(this.diffObj, {
+        diffArr,
+        isIncrement,
+      })
+    },
+    // create row prop State;
+    createRowPropState(propObj) {
+      const stateObj = {};
+      for (const key in propObj) {
+        if (Object.hasOwnProperty.call(propObj, key) && this.editableOps.includes(key)) {
+          stateObj[key] = { edit: false }
+        }
+      }
+      return stateObj;
+    },
+    /* 操作类 */
+    // 同步属性绑定的状态
+    updatePropState(tableData) {
+      const { diffArr, isIncrement } = this.diffObj;
+      const { propMap, propArr } = this;
+      const tarArr = diffArr || tableData;
+      tarArr.forEach(item => {
+        if (isIncrement) { // 增
+          const rowPropObj = this.createRowPropState(item);
+          propMap.set(item, rowPropObj);
+          propArr.push(rowPropObj);
+        } else { // 删
+          const rowPropObj = propMap.get(item);
+          const index = propArr.findIndex(it => it === rowPropObj);
+          propArr.splice(index, 1)
+          propMap.delete(item);
+        }
+      })
+    },
+    // 
+    getRowState(row) {
+      return this.propMap.get(row);
+    },
+    // 
+    cellClick(row, { property }, cell, event) {
+      if (!this.editableOps.includes(property)) return;
+      this.getRowState(row)[property].edit = true;
+    },
+    // 
+    handlerClick() {
+
+    },
     //删
-    deleteData(index) {
+    deleteData(index, row) {
       this.tableData.splice(index, 1);
+      this.setDiffObj(row, false)
     },
     // 首部增加
     addFirstData() {
-      this.tableData.unshift({
+      const data = {
         data: '2036-05-01',
         name: '王0虎',
         tarAddress: '上海市普陀区金沙江路 1518 弄'
-      })
+      };
+      this.tableData.unshift(data);
+      this.setDiffObj(data, true)
     },
     // 尾部添加
     addLastData() {
-      this.tableData.push({
+      const data = {
         data: '2036-05-01',
         name: '王0虎',
         tarAddress: '上海市普陀区金沙江路 1518 弄'
-      })
+      };
+      this.tableData.push(data);
+      this.setDiffObj(data, true)
     },
     // 提交
     submitForm(formName) {
