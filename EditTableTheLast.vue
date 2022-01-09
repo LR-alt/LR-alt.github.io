@@ -36,23 +36,22 @@
 </template>
 
 <script>
+import initPropMap from '../util/common-methods';
 export default {
   name: 'HelloWorld',
   data() {
     return {
       tableData: [],
       ruleForm: {},
-      propArr: [],
-      propMap: new Map(),
-      diffObj: {
-        diffArr: null,
-        isIncrement: true,
-      },
-      editableOps: ['data', 'name'],
+      refArr: [],
+      propMap: null,
+      urlObj: {},
+      columnOps: ['data', 'name'],
     }
   },
   created() {
     this.getTableData();
+    this.usePropMap = initPropMap(this.refArr, this.columnOps, this.createRowState);
   },
   computed: {
     getRule() {
@@ -65,8 +64,6 @@ export default {
     tableData(newTable) {
       // 表单数据浅拷贝于数组，因此表单和数组共享子项数据。
       this.ruleForm = { ...newTable };
-      // 同步属性绑定的状态
-      this.updatePropState(newTable);
     },
   },
   methods: {
@@ -90,53 +87,36 @@ export default {
           name: '',
           tarAddress: '上海市普陀区金沙江路 1514 弄'
         }];
+        // 同步副作用
+        this.propMap = this.usePropMap({ diffArr: srcData, isInitialize: true })
         this.tableData = srcData;
       }, 200);
     },
-    // set prop diff state
-    setDiffObj(diffArr, isIncrement) {
-      diffArr = Array.isArray(diffArr) ? diffArr : [diffArr];
-      Object.assign(this.diffObj, {
-        diffArr,
-        isIncrement,
-      })
-    },
     // create row prop State;
-    createRowPropState(propObj) {
+    createRowState(rowObj, columns) {
       const stateObj = {};
-      for (const key in propObj) {
-        if (Object.hasOwnProperty.call(propObj, key) && this.editableOps.includes(key)) {
-          stateObj[key] = { edit: false }
+      const { urlObj } = this;
+      for (const key in rowObj) {
+        const valKey = rowObj[key];
+        if (Object.hasOwnProperty.call(rowObj, key) && columns.includes(key)) {
+          stateObj[key] = key === 'data'
+            ? {
+              edit: false,
+              url: urlObj[valKey] || '',
+            }
+            : { edit: false }
         }
       }
       return stateObj;
     },
-    /* 操作类 */
-    // 同步属性绑定的状态
-    updatePropState(tableData) {
-      const { diffArr, isIncrement } = this.diffObj;
-      const { propMap, propArr } = this;
-      const tarArr = diffArr || tableData;
-      tarArr.forEach(item => {
-        if (isIncrement) { // 增
-          const rowPropObj = this.createRowPropState(item);
-          propMap.set(item, rowPropObj);
-          propArr.push(rowPropObj);
-        } else { // 删
-          const rowPropObj = propMap.get(item);
-          const index = propArr.findIndex(it => it === rowPropObj);
-          propArr.splice(index, 1)
-          propMap.delete(item);
-        }
-      })
-    },
-    // 
+    // 获取状态
     getRowState(row) {
       return this.propMap.get(row);
     },
+    /* 操作类 */
     // 
-    cellClick(row, { property }, cell, event) {
-      if (!this.editableOps.includes(property)) return;
+    cellClick(row, { property }) {
+      if (!this.columnOps.includes(property)) return;
       this.getRowState(row)[property].edit = true;
     },
     // 
@@ -145,8 +125,9 @@ export default {
     },
     //删
     deleteData(index, row) {
+      // 同步副作用
+      this.usePropMap({ diffArr: [row], isIncrement: false })
       this.tableData.splice(index, 1);
-      this.setDiffObj(row, false)
     },
     // 首部增加
     addFirstData() {
@@ -155,8 +136,12 @@ export default {
         name: '王0虎',
         tarAddress: '上海市普陀区金沙江路 1518 弄'
       };
+      const partUrls = {
+        '2036-05-01': 'www.tx.com'
+      }
+      this.urlObj = partUrls;
+      this.usePropMap({ diffArr: [data], isIncrement: true })
       this.tableData.unshift(data);
-      this.setDiffObj(data, true)
     },
     // 尾部添加
     addLastData() {
@@ -165,8 +150,13 @@ export default {
         name: '王0虎',
         tarAddress: '上海市普陀区金沙江路 1518 弄'
       };
+      const partUrls = {
+        '2036-05-01': 'www.tx.com'
+      }
+
+      this.urlObj = partUrls;
+      this.usePropMap({ diffArr: [data], isIncrement: true });
       this.tableData.push(data);
-      this.setDiffObj(data, true)
     },
     // 提交
     submitForm(formName) {
@@ -190,7 +180,5 @@ export default {
 
 <!-- Add "scoped" attribute to limit CSS to this component only -->
 <style scoped>
-.el-form-item {
-  /* margin-bottom: 0px; */
-}
+
 </style>
