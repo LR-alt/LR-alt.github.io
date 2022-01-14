@@ -36,36 +36,32 @@
 </template>
 
 <script>
-import initPropMap from '../util/common-methods';
+import usePropState from '../util/common-methods';
 export default {
   name: 'HelloWorld',
   data() {
     return {
       tableData: [],
-      ruleForm: {},
       refArr: [],
-      propMap: null,
       urlObj: {},
       columnOps: ['data', 'name'],
     }
   },
   created() {
     this.getTableData();
-    this.usePropMap = initPropMap(this.refArr, this.columnOps, this.createRowState);
+    [this.getRowState, this.setPropState] = usePropState(this.refArr, this.columnOps, this.createRowState);
   },
   computed: {
+    ruleForm({ tableData }) {
+      return { ...tableData }
+    },
     getRule() {
       return [
         { required: true, message: '必填', trigger: 'blur' },
       ]
-    },
+    }
   },
-  watch: {
-    tableData(newTable) {
-      // 表单数据浅拷贝于数组，因此表单和数组共享子项数据。
-      this.ruleForm = { ...newTable };
-    },
-  },
+
   methods: {
     // 请求数据
     getTableData() {
@@ -88,18 +84,18 @@ export default {
           tarAddress: '上海市普陀区金沙江路 1514 弄'
         }];
         // 同步副作用
-        this.propMap = this.usePropMap({ diffArr: srcData, isInitialize: true })
+        this.setPropState({ diffArr: srcData, isInitialize: true })
         this.tableData = srcData;
       }, 200);
     },
     // create row prop State;
-    createRowState(rowObj, columns) {
-      const stateObj = {};
+    createRowState(row, columns) {
+      const rowState = {};
       const { urlObj } = this;
-      for (const key in rowObj) {
-        const valKey = rowObj[key];
-        if (Object.hasOwnProperty.call(rowObj, key) && columns.includes(key)) {
-          stateObj[key] = key === 'data'
+      for (const key in row) {
+        if (Object.hasOwnProperty.call(row, key) && columns.includes(key)) {
+          const valKey = row[key];
+          rowState[key] = key === 'data'
             ? {
               edit: false,
               url: urlObj[valKey] || '',
@@ -107,26 +103,17 @@ export default {
             : { edit: false }
         }
       }
-      return stateObj;
-    },
-    // 获取状态
-    getRowState(row) {
-      return this.propMap.get(row);
+      return rowState;
     },
     /* 操作类 */
-    // 
     cellClick(row, { property }) {
       if (!this.columnOps.includes(property)) return;
       this.getRowState(row)[property].edit = true;
     },
-    // 
-    handlerClick() {
-
-    },
     //删
     deleteData(index, row) {
       // 同步副作用
-      this.usePropMap({ diffArr: [row], isIncrement: false })
+      this.setPropState({ diffArr: [row], isAdd: false })
       this.tableData.splice(index, 1);
     },
     // 首部增加
@@ -140,7 +127,7 @@ export default {
         '2036-05-01': 'www.tx.com'
       }
       this.urlObj = partUrls;
-      this.usePropMap({ diffArr: [data], isIncrement: true })
+      this.setPropState({ diffArr: [data] })
       this.tableData.unshift(data);
     },
     // 尾部添加
@@ -155,7 +142,7 @@ export default {
       }
 
       this.urlObj = partUrls;
-      this.usePropMap({ diffArr: [data], isIncrement: true });
+      this.setPropState({ diffArr: [data] });
       this.tableData.push(data);
     },
     // 提交
@@ -180,5 +167,4 @@ export default {
 
 <!-- Add "scoped" attribute to limit CSS to this component only -->
 <style scoped>
-
 </style>
