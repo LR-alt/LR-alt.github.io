@@ -2,50 +2,45 @@
   <div class="attachment">
     <el-upload
       class="upload-demo"
-      action="https://jsonplaceholder.typicode.com/posts/"
-      multiple
+      :action="uploadUrl"
       :file-list="fileList"
       :before-upload="beforeUpload"
+      :on-progress="handleProgress"
       :on-success="handleSuccess"
+      :on-error="handleError"
+      multiple
     >
       <el-button size="small" type="primary">上传附件</el-button>
     </el-upload>
-    <el-table :data="tableData">
-      <el-table-column prop="name" label="名称"></el-table-column>
-      <el-table-column prop="fileType" label="文件类型"></el-table-column>
-      <el-table-column prop="size" label="大小"></el-table-column>
-      <el-table-column prop="status" label="状态"></el-table-column>
-      <el-table-column label="操作">
-        <template slot-scope="{row,$index}">
-          <el-button size="mini" type="danger" @click="deleteData($index, row.uid)">Delete</el-button>
-        </template>
+    <el-table :data="tableData" @selection-change="selectChange">
+      <el-table-column v-if="isSelect" type="selection" width="50"></el-table-column>
+      <el-table-column
+        v-for="item in showColumns"
+        :key="item.prop"
+        :prop="item.prop"
+        :label="item.label"
+        v-slot="{ row }"
+      >
+        <slot :name="item.prop" :row="row" :item="item">
+          <span>{{ customVal(row, item.prop) }}</span>
+        </slot>
+      </el-table-column>
+      <el-table-column label="操作" v-slot="{ row, $index }">
+        <slot name="btn" :row="row" :index="$index">
+          <el-button size="mini" type="danger" @click="deleteData($index, row.uid)">defDelete</el-button>
+        </slot>
       </el-table-column>
     </el-table>
   </div>
 </template>
 <script>
-import useValidator from '../util/valid';
+import { useTableParams, useValidator } from '../util/valid';
 import { rules, strategies } from '../util/strategy';
 export default {
   name: 'AttachmentInfo',
-  props: {
-    customRules: {
-      type: Array,
-      default: () => ([]),
-    },
-    exclude: {
-      type: Array,
-      default: () => ([])
-    },
-    include: {
-      type: Array,
-      default: () => ([])
-    }
-  },
+
   data() {
     return {
-      fileList: [],
-      tableData: [],
       defRules: rules,
     };
   },
@@ -55,46 +50,121 @@ export default {
       return [...curDefRules, ...customRules];
     },
   },
-  created() {
-    console.log(this.allRules);
-  },
   mounted() {
-    const [addRule, startVerify] = useValidator(strategies);
-    addRule(this.allRules);
-    this.startVerify = startVerify;
+    // 初始化校验
+    const startVerify = useValidator(strategies, this.allRules);
+    // 初始化表格
+    const { addItem, setEffect } = useTableParams(this.tableData, this.uploadStateFns);
+    // 挂载到this中
+    Object.assign(this, {
+      startVerify,
+      addItem,
+      setEffect,
+    })
   },
   methods: {
     beforeUpload(file) {
-      /* 
-     * 文件大小不能超过500kb
-     * 文件类型只能是jpg/png
-     * 文件名大小不能超过50个字符
-     * 文件名必须带有水印两个字
-     * 文件名不能重名
-     * 文件数量不能超过5个
-     */
-      const errMsg = this.startVerify(file, this.tableData);
+      // 校验
+      const errMsg = this.startVerify({ file, tableData: this.tableData });
       if (errMsg) {
         this.$message.error(errMsg);
         return false;
-      } else {
-        return true;
       }
+      // 初始化入参
+      this.addItem(this.refProps).setEffect('onBefore', { file }, defItem => {
+        defItem.status = 'upload start';
+      });
+    },
+    handleProgress(event, file, fileList) {
+      this.setEffect('onProgress', { event, file, fileList }, defItem => {
+        defItem.status = 'uploading';
+      })
     },
     handleSuccess(res, file, fileList) {
-      const { uid, name, raw: { type }, size, status } = file;
-      this.tableData.push({
-        uid,
-        name,
-        size,
-        status,
-        fileType: type,
-      });
+      this.setEffect('onSuccess', { res, file, fileList }, defItem => {
+        defItem.status = 'upload success';
+      })
+    },
+    handleError(err, file, fileList) {
+      this.setEffect('onError', { err, file, fileList }, defItem => {
+        defItem.status = 'upload failing';
+      })
     },
     deleteData(index, id) {
       this.tableData.splice(index, 1);
       this.fileList = this.fileList.filter(item => item.uid !== id);
     },
-  }
+  },
+  props: {
+    uploadUrl: {
+      type: String,
+      default: '',
+      required: true,
+    },
+    showColumns: {
+      type: Array,
+      default: () => [],
+      required: true,
+    },
+    tableData: {
+      type: Array,
+      default: () => [],
+      required: true,
+    },
+    // 自定义规则
+    customRules: {
+      type: Array,
+      default: () => [],
+    },
+    // 排除规则
+    exclude: { 
+      type: Array,
+      default: () => []
+    },
+    // 包含规则
+    include: {
+      type: Array,
+      default: () => []
+    },
+    fileList: {
+      type: Array,
+      default: () => []
+    },
+    // 多选 和 单选
+    selectChange: {
+      type: Function,
+      default: () => { }
+    },
+    isSelect: {
+      type: Boolean,
+      default: false,
+    },
+    // 响应式（动态）属性
+    refProps: {
+      type: Object,
+      default: () => ({
+        status: '',
+      })
+    },
+    // 状态函数
+    uploadStateFns: {
+      type: Object,
+      default: () => ({}),
+      validator(statusFnObj) {
+        const requiredFnNames = ['onBefore', 'onProgress', 'onSuccess', 'onError', 'onChange'];
+        const curFnNames = Object.keys(statusFnObj);
+        // 传入的属性值需为函数且函数名称必须包含于requiredFnNames中
+        return curFnNames.every(fnName => {
+          const isFn = typeof statusFnObj[fnName] === 'function';
+          const isInclude = requiredFnNames.includes(fnName);
+          return isFn && isInclude;
+        })
+      }
+    },
+    customVal: {
+      type: Function,
+      default: (row, prop) => row[prop],
+    },
+  },
 }
 </script>
